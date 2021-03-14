@@ -15,6 +15,8 @@ uint8_t Init_CC1101(CC1101_t *cc1101_init)
 	cc1101.gd2_pin = cc1101_init->gd2_pin;
 	cc1101.spi_ss_pin = cc1101_init->spi_ss_pin;
 	cc1101.spi = cc1101_init->spi;
+	nrf_gpio_cfg_input(cc1101.gd0_pin, NRF_GPIO_PIN_PULLDOWN);
+
 	return 0;
 }
 
