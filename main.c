@@ -4,9 +4,9 @@
 #include "nrf_gpio.h"
 #include "nrf_delay.h"
 #include "boards.h"
-#include "spi_driver.h"
-#include "CC1101_regs.h"
-#include "CC1101.h"
+#include "spi/spi_driver.h"
+#include "cc1101/CC1101_regs.h"
+#include "cc1101/CC1101.h"
 
 #include "app_util_platform.h"
 #include "app_error.h"
@@ -15,20 +15,50 @@
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-void cc1101Initialization(NRF_SPI_Type * spi)
+void spi_initialization(Spi_t *spi)
 {
-	// reset CC1101
+	if(spi_init(spi))
+	{
+		NRF_LOG_INFO("SPI initialization is done, SPI started...");
+	}
+}
+
+void cc1101_initialization(CC1101_t * cc1101)
+{
+	uint8_t status = Init_CC1101(cc1101);
+
+	NRF_LOG_INFO("CC1101 initialization is done, Chip stsus = %x", status);
+	NRF_LOG_INFO("chip part number = %x", ReadStatus_CC1101(cc1101, TI_CC1101_PARTNUM));
+	NRF_LOG_INFO("chip version = %x", ReadStatus_CC1101(cc1101, TI_CC1101_VERSION));
+}
+
+int main(void)
+{
+	
+	bsp_board_init(BSP_INIT_LEDS);
+	
+	APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
+	NRF_LOG_DEFAULT_BACKENDS_INIT();
+
+	// spi init
+	Spi_t spi_init;
+	spi_init.spi = NRF_SPI0;
+	spi_init.cs_pin = SPI_SS_PIN;
+	spi_init.clk_pin = SPI_SCK_PIN;
+	spi_init.mosi_pin = SPI_MOSI_PIN;
+	spi_init.miso_pin = SPI_MISO_PIN;
+	spi_init.int_enabled = false;
+	spi_initialization(&spi_init);
+
+	// cc1101 init
 	CC1101_t cc1101_init;
-	cc1101_init.spi = spi;
+	cc1101_init.spi = &spi_init;
 	cc1101_init.gd0_pin = CC1101_GDO0_PIN;
 	cc1101_init.gd2_pin = CC1101_GDO2_PIN;
-	cc1101_init.spi_ss_pin = CC1101_CS_PIN;
-	Init_CC1101(&cc1101_init);
-	PowerupReset_CC1101();
-	WriteStrobe_CC1101(TI_CC1101_SRES);
-	
-	// Somfy - OOK @ 433.42MHz baud_rate=1.6KHz
+	cc1101_init.spi_cs_pin = CC1101_CS_PIN;
+		// Somfy - OOK @ 433.42MHz baud_rate=1.6KHz
 	uint8_t paTable[] = {0x00,0x60,0x00,0x00,0x00,0x00,0x00,0x00};
+	cc1101_init.pa_table = paTable;
 	RF_SETTINGS rfSettings =
 	{
 		0x06,   // FSCTRL1   Frequency synthesizer control.
@@ -67,31 +97,8 @@ void cc1101Initialization(NRF_SPI_Type * spi)
 		0x00,   // ADDR      Device address.
 		0x0a    // PKTLEN    Packet length.
 	};
-
-	writeRfSettings(&rfSettings);
-	uint8_t CC1101_status = WriteReg_CC1101(TI_CC1101_PKTLEN, 10);
-	WriteBurstReg_CC1101(TI_CC1101_PATABLE, paTable, 8);
-	NRF_LOG_INFO("CC1101 initialization is done, Chip stsus = %x", CC1101_status);
-	NRF_LOG_INFO("chip part number = %x", ReadStatus_CC1101(TI_CC1101_PARTNUM));
-	NRF_LOG_INFO("chip version = %x", ReadStatus_CC1101(TI_CC1101_VERSION));
-}
-
-int main(void)
-{
-	
-	bsp_board_init(BSP_INIT_LEDS);
-	
-	APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
-	NRF_LOG_DEFAULT_BACKENDS_INIT();
-
-	NRF_SPI_Type * spi = NRF_SPI0;
-	
-	if(spi_init(spi, false))
-	{
-		NRF_LOG_INFO("SPI initialization is done, SPI started...");
-	}
-	
-	cc1101Initialization(spi);
+	cc1101_init.rf_setting = rfSettings;
+	cc1101_initialization(&cc1101_init);
 
 	uint8_t txBuffer[] = {0x50, 0x51, 0x52, 0x53, 0x54, 0x50, 0x51, 0x52, 0x53, 0x54};
 	// NRF_LOG_INFO("Transfer completed.");
@@ -100,9 +107,9 @@ int main(void)
 	{
 		//spi_xfer_buf(spi, m_tx_buf, 5, m_rx_buf);
 		//spi_int_xfer_buf(spi, m_tx_buf, 5, m_rx_buf);
-		RFSendPacket(txBuffer, 10);
+		RFSendPacket(&cc1101_init, txBuffer, 10);
 		NRF_LOG_INFO("Transfer completed.");
-		WriteStrobe_CC1101(TI_CC1101_SIDLE);
+		WriteStrobe_CC1101(&cc1101_init, TI_CC1101_SIDLE);
 
 		NRF_LOG_INFO("loop is running...");
 		NRF_LOG_FLUSH();

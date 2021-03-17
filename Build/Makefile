@@ -41,7 +41,7 @@ SRC_FILES += \
   $(SDK_ROOT)/modules/nrfx/drivers/src/prs/nrfx_prs.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_uart.c \
   $(SDK_ROOT)/modules/nrfx/drivers/src/nrfx_uarte.c \
-  $(PROJ_DIR)/spi_driver.c \
+  $(PROJ_DIR)/spi/spi_driver.c \
   $(PROJ_DIR)/CC1101/CC1101.c \
   $(PROJ_DIR)/main.c \
   $(SDK_ROOT)/modules/nrfx/mdk/system_nrf52840.c \
@@ -52,6 +52,7 @@ INC_FOLDERS += \
   $(SDK_ROOT)/modules/nrfx/mdk \
   $(SDK_ROOT)/components/libraries/scheduler \
   $(PROJ_DIR) \
+  $(PROJ_DIR)/spi \
   $(PROJ_DIR)/CC1101 \
   $(SDK_ROOT)/components/libraries/timer \
   $(SDK_ROOT)/components/boards \

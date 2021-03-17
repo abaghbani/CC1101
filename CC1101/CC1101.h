@@ -1,16 +1,7 @@
 #ifndef CC1101_CONFIG_H
 #define CC1101_CONFIG_H
 
-#include "nrf_spi.h"
-
-typedef struct CC1101_struct
-{
-    uint8_t             gd0_pin;
-    uint8_t             gd1_pin;
-    uint8_t             gd2_pin;
-    uint8_t             spi_ss_pin;
-    NRF_SPI_Type        *spi;
-} CC1101_t;
+#include "spi_driver.h"
 
 typedef struct S_RF_SETTINGS
 {
@@ -51,17 +42,27 @@ typedef struct S_RF_SETTINGS
     uint8_t PKTLEN;    // Packet length.
 } RF_SETTINGS;
 
+typedef struct CC1101_struct
+{
+    uint8_t             gd0_pin;
+    uint8_t             gd1_pin;
+    uint8_t             gd2_pin;
+    uint8_t             spi_cs_pin;
+    Spi_t               *spi;
+    RF_SETTINGS         rf_setting;
+    uint8_t             *pa_table;
+} CC1101_t;
 
-uint8_t Init_CC1101(CC1101_t * cc1101_init);
-uint8_t PowerupReset_CC1101();
-uint8_t WriteReg_CC1101(uint8_t addr, uint8_t value);
-uint8_t WriteBurstReg_CC1101(uint8_t addr, uint8_t *buffer, uint8_t count);
-uint8_t ReadReg_CC1101(uint8_t addr);
-uint8_t ReadBurstReg_CC1101(uint8_t addr, uint8_t *buffer, uint8_t count);
-uint8_t ReadStatus_CC1101(uint8_t addr);
-uint8_t WriteStrobe_CC1101(uint8_t strobe);
-uint8_t writeRfSettings(RF_SETTINGS * pRfSettings);
-uint8_t RFSendPacket(uint8_t *txBuffer, uint8_t size);
-uint8_t RFReceivePacket(uint8_t *rxBuffer, uint8_t length);
+uint8_t Init_CC1101(CC1101_t * cc1101);
+uint8_t PowerupReset_CC1101(CC1101_t * cc1101);
+uint8_t WriteReg_CC1101(CC1101_t * cc1101, uint8_t addr, uint8_t value);
+uint8_t WriteBurstReg_CC1101(CC1101_t * cc1101, uint8_t addr, uint8_t *buffer, uint8_t count);
+uint8_t ReadReg_CC1101(CC1101_t * cc1101, uint8_t addr);
+uint8_t ReadBurstReg_CC1101(CC1101_t * cc1101, uint8_t addr, uint8_t *buffer, uint8_t count);
+uint8_t ReadStatus_CC1101(CC1101_t * cc1101, uint8_t addr);
+uint8_t WriteStrobe_CC1101(CC1101_t * cc1101, uint8_t strobe);
+uint8_t writeRfSettings(CC1101_t * cc1101);
+uint8_t RFSendPacket(CC1101_t * cc1101, uint8_t *txBuffer, uint8_t size);
+uint8_t RFReceivePacket(CC1101_t * cc1101, uint8_t *rxBuffer, uint8_t length);
 
 #endif //CC1101_CONFIG_H
