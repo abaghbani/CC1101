@@ -19,6 +19,8 @@ typedef struct S_RF_SETTINGS
     uint8_t DEVIATN;   // Modem deviation setting (when FSK modulation is enabled).
     uint8_t FREND1;    // Front end RX configuration.
     uint8_t FREND0;    // Front end RX configuration.
+    uint8_t MCSM2;     // Main Radio Control State Machine configuration.
+    uint8_t MCSM1;     // Main Radio Control State Machine configuration.
     uint8_t MCSM0;     // Main Radio Control State Machine configuration.
     uint8_t FOCCFG;    // Frequency Offset Compensation Configuration.
     uint8_t BSCFG;     // Bit synchronization Configuration.

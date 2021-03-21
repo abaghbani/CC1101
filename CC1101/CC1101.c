@@ -13,8 +13,7 @@ uint8_t Init_CC1101(CC1101_t *cc1101)
 	PowerupReset_CC1101(cc1101);
 	WriteStrobe_CC1101(cc1101, TI_CC1101_SRES);
 	
-	writeRfSettings(cc1101);
-	uint8_t CC1101_status = WriteReg_CC1101(cc1101, TI_CC1101_PKTLEN, 10);
+	uint8_t CC1101_status = writeRfSettings(cc1101);
 	WriteBurstReg_CC1101(cc1101, TI_CC1101_PATABLE, cc1101->pa_table, 8);
 
 	return CC1101_status;
@@ -99,6 +98,8 @@ uint8_t writeRfSettings(CC1101_t *cc1101)
 	WriteReg_CC1101(cc1101, TI_CC1101_DEVIATN,  cc1101->rf_setting.DEVIATN);
 	WriteReg_CC1101(cc1101, TI_CC1101_FREND1,   cc1101->rf_setting.FREND1);
 	WriteReg_CC1101(cc1101, TI_CC1101_FREND0,   cc1101->rf_setting.FREND0);
+	WriteReg_CC1101(cc1101, TI_CC1101_MCSM2 ,   cc1101->rf_setting.MCSM2 );
+	WriteReg_CC1101(cc1101, TI_CC1101_MCSM1 ,   cc1101->rf_setting.MCSM1 );
 	WriteReg_CC1101(cc1101, TI_CC1101_MCSM0 ,   cc1101->rf_setting.MCSM0 );
 	WriteReg_CC1101(cc1101, TI_CC1101_FOCCFG,   cc1101->rf_setting.FOCCFG);
 	WriteReg_CC1101(cc1101, TI_CC1101_BSCFG,    cc1101->rf_setting.BSCFG);
@@ -145,6 +146,7 @@ uint8_t RFSendPacket(CC1101_t *cc1101, uint8_t *txBuffer, uint8_t size)
 {
 	uint8_t retValue;
 	retValue = WriteBurstReg_CC1101(cc1101, TI_CC1101_TXFIFO, txBuffer, size);
+	WriteReg_CC1101(cc1101, TI_CC1101_PKTLEN, size);
 	WriteStrobe_CC1101(cc1101, TI_CC1101_STX);				// Change state to TX, initiating, data transfer
 	while(!nrf_gpio_pin_read(cc1101->gd0_pin));		// Wait GDO0 to go hi -> sync TX'ed
 	while(nrf_gpio_pin_read(cc1101->gd0_pin));		// Wait GDO0 to clear -> end of pkt
