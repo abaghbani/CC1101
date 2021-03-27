@@ -4,9 +4,10 @@
 #include "nrf_gpio.h"
 #include "nrf_delay.h"
 #include "boards.h"
-#include "spi/spi_driver.h"
-#include "cc1101/CC1101_regs.h"
-#include "cc1101/CC1101.h"
+#include "spi_driver.h"
+#include "CC1101_regs.h"
+#include "CC1101.h"
+#include "somfy.h"
 
 #include "app_util_platform.h"
 #include "app_error.h"
@@ -95,7 +96,8 @@ int main(void)
 		0x29,   // IOCFG2    GDO2 output pin configuration.
 		0x06,   // IOCFG0D   GDO0 output pin configuration. 
 		0x04,   // PKTCTRL1  Packet automation control.
-		0x04,   // PKTCTRL0  Packet automation control.
+		0x00,   // PKTCTRL0  Packet automation control. -- for somfy v1
+		//0x32,   // PKTCTRL0  Packet automation control. -- for somfy v2
 		0x00,   // ADDR      Device address.
 		0xff    // PKTLEN    Packet length.
 	};
@@ -103,17 +105,15 @@ int main(void)
 	cc1101_initialization(&cc1101_init);
 
 	uint8_t txBuffer[] = {0x50, 0x51, 0x52, 0x53, 0x54, 0x50, 0x51, 0x52, 0x53, 0x54};
-	// NRF_LOG_INFO("Transfer completed.");
 	
 	while(1)
 	{
-		RFSendPacket(&cc1101_init, txBuffer, 10);
+		SendSomfyFrame(&cc1101_init, txBuffer);
 		NRF_LOG_INFO("Transfer completed.");
 
 		NRF_LOG_INFO("loop is running...");
 		NRF_LOG_FLUSH();
 		bsp_board_led_invert(BSP_BOARD_LED_0);
-		nrf_delay_ms(3000);
-		
+		nrf_delay_ms(3000);		
 	}
 }

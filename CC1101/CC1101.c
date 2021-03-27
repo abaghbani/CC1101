@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "nrf_spi.h"
 #include "nrf_gpio.h"
 #include "nrf_delay.h"
@@ -122,6 +123,22 @@ uint8_t writeRfSettings(CC1101_t *cc1101)
 	WriteReg_CC1101(cc1101, TI_CC1101_ADDR,     cc1101->rf_setting.ADDR);
 	uint8_t retVal = WriteReg_CC1101(cc1101, TI_CC1101_PKTLEN,   cc1101->rf_setting.PKTLEN);
 	return retVal;
+}
+
+void updateModemSettings(CC1101_t *cc1101)
+{
+	WriteReg_CC1101(cc1101, TI_CC1101_MDMCFG4,  cc1101->rf_setting.MDMCFG4);
+	WriteReg_CC1101(cc1101, TI_CC1101_MDMCFG3,  cc1101->rf_setting.MDMCFG3);
+	WriteReg_CC1101(cc1101, TI_CC1101_MDMCFG2,  cc1101->rf_setting.MDMCFG2);
+}
+
+void modemSetting(CC1101_t *cc1101, double baudrate, bool manchester_enabled)
+{
+	// rate = (256+DRATE_M).2**DRATE_E.f_OSC/2**28
+	const double f_osc = 26000000.0;
+	cc1101->rf_setting.MDMCFG4 = (cc1101->rf_setting.MDMCFG4 & 0xf0) + (uint8_t)(log2(baudrate*pow(2,28)/f_osc)-8);
+	cc1101->rf_setting.MDMCFG3 = (uint8_t)((baudrate*pow(2,28-(cc1101->rf_setting.MDMCFG4 & 0x0f))/f_osc)-256);
+	cc1101->rf_setting.MDMCFG2 = manchester_enabled ? cc1101->rf_setting.MDMCFG2 | 0x08 : cc1101->rf_setting.MDMCFG2 & 0xf7; 
 }
 
 //-----------------------------------------------------------------------------

@@ -66,5 +66,8 @@ uint8_t WriteStrobe_CC1101(CC1101_t * cc1101, uint8_t strobe);
 uint8_t writeRfSettings(CC1101_t * cc1101);
 uint8_t RFSendPacket(CC1101_t * cc1101, uint8_t *txBuffer, uint8_t size);
 uint8_t RFReceivePacket(CC1101_t * cc1101, uint8_t *rxBuffer, uint8_t length);
+void updateModemSettings(CC1101_t *cc1101);
+void modemSetting(CC1101_t *cc1101, double baudrate, bool manchester_enabled);
+
 
 #endif //CC1101_CONFIG_H
