@@ -65,8 +65,8 @@ int main(void)
 		0x0e,   // FSCTRL1   Frequency synthesizer control.
 		0x00,   // FSCTRL0   Frequency synthesizer control.
 		0x10,   // FREQ2     Frequency control word, high byte.
-		0xAB,   // FREQ1     Frequency control word, middle byte.
-		0x85,   // FREQ0     Frequency control word, low byte.
+		0xAC,   // FREQ1     Frequency control word, middle byte.
+		0x46,   // FREQ0     Frequency control word, low byte.
 		0xf6,   // MDMCFG4   Modem configuration.
 		0x43,   // MDMCFG3   Modem configuration.
 		0x38,   // MDMCFG2   Modem configuration.
@@ -104,16 +104,25 @@ int main(void)
 	cc1101_init.rf_setting = rfSettings;
 	cc1101_initialization(&cc1101_init);
 
-	uint8_t txBuffer[] = {0x50, 0x51, 0x52, 0x53, 0x54, 0x50, 0x51, 0x52, 0x53, 0x54};
+	//uint8_t txBuffer[7] = {0x50, 0x51, 0x52, 0x53, 0x54, 0x50, 0x51, 0x52, 0x53, 0x54};
+	uint8_t txBuffer[7];
+	uint16_t rolling_counter = 0x1533;
 	
+
 	while(1)
 	{
-		SendSomfyFrame(&cc1101_init, txBuffer);
+		SendPowerOn(&cc1101_init);
+		nrf_delay_ms(20);
+		make_somfy_frame(txBuffer, move_up, rolling_counter, 0x7a724a);
+		SendSomfyFrame(&cc1101_init, 2, txBuffer);
+		nrf_delay_ms(30);		
+		SendSomfyFrame(&cc1101_init, 7, txBuffer);
+		rolling_counter++;
 		NRF_LOG_INFO("Transfer completed.");
 
 		NRF_LOG_INFO("loop is running...");
 		NRF_LOG_FLUSH();
 		bsp_board_led_invert(BSP_BOARD_LED_0);
-		nrf_delay_ms(3000);		
+		nrf_delay_ms(5000);		
 	}
 }
