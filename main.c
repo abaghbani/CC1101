@@ -33,10 +33,22 @@ void cc1101_initialization(CC1101_t * cc1101)
 	NRF_LOG_INFO("chip version = %x", ReadStatus_CC1101(cc1101, TI_CC1101_VERSION));
 }
 
+void somfy_command(CC1101_t * cc1101, uint8_t command, uint16_t rolling_counter, uint32_t address)
+{
+	uint8_t txBuffer[7];
+
+	SendPowerOn(cc1101);
+	nrf_delay_ms(20);
+	make_somfy_frame(txBuffer, command, rolling_counter, address);
+	SendSomfyFrame(cc1101, 2, txBuffer);
+	nrf_delay_ms(30);		
+	SendSomfyFrame(cc1101, 7, txBuffer);
+}
+
 int main(void)
 {
 	
-	bsp_board_init(BSP_INIT_LEDS);
+	bsp_board_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS);
 	
 	APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
 	NRF_LOG_DEFAULT_BACKENDS_INIT();
@@ -104,25 +116,36 @@ int main(void)
 	cc1101_init.rf_setting = rfSettings;
 	cc1101_initialization(&cc1101_init);
 
-	//uint8_t txBuffer[7] = {0x50, 0x51, 0x52, 0x53, 0x54, 0x50, 0x51, 0x52, 0x53, 0x54};
-	uint8_t txBuffer[7];
-	uint16_t rolling_counter = 0x1533;
+	uint16_t rolling_counter = 0x1553;
+	uint32_t address = 0x7a724a; // room-1 of unit-304
 	
-
 	while(1)
 	{
-		SendPowerOn(&cc1101_init);
-		nrf_delay_ms(20);
-		make_somfy_frame(txBuffer, move_up, rolling_counter, 0x7a724a);
-		SendSomfyFrame(&cc1101_init, 2, txBuffer);
-		nrf_delay_ms(30);		
-		SendSomfyFrame(&cc1101_init, 7, txBuffer);
-		rolling_counter++;
-		NRF_LOG_INFO("Transfer completed.");
-
+		if(bsp_board_button_state_get(BSP_BOARD_BUTTON_0))
+		{
+			somfy_command(&cc1101_init, move_up, rolling_counter, address);
+			rolling_counter++;
+			NRF_LOG_INFO("button 0 is pressed.");
+		}
+		if(bsp_board_button_state_get(BSP_BOARD_BUTTON_1))
+		{
+			somfy_command(&cc1101_init, move_down, rolling_counter, address);
+			rolling_counter++;
+			NRF_LOG_INFO("button 1 is pressed.");
+		}
+		if(bsp_board_button_state_get(BSP_BOARD_BUTTON_2))
+		{
+			NRF_LOG_INFO("button 2 is pressed.");
+		}
+		if(bsp_board_button_state_get(BSP_BOARD_BUTTON_3))
+		{
+			NRF_LOG_INFO("button 3 is pressed.");
+		}
+		
 		NRF_LOG_INFO("loop is running...");
 		NRF_LOG_FLUSH();
 		bsp_board_led_invert(BSP_BOARD_LED_0);
-		nrf_delay_ms(5000);		
+		nrf_delay_ms(500);	
+			
 	}
 }
