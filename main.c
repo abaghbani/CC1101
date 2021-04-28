@@ -7,7 +7,7 @@
 #include "spi_driver.h"
 #include "CC1101_regs.h"
 #include "CC1101.h"
-#include "somfy.h"
+#include "hormann.h"
 
 #include "app_util_platform.h"
 #include "app_error.h"
@@ -33,16 +33,47 @@ void cc1101_initialization(CC1101_t * cc1101)
 	NRF_LOG_INFO("chip version = %x", ReadStatus_CC1101(cc1101, TI_CC1101_VERSION));
 }
 
-void somfy_command(CC1101_t * cc1101, uint8_t command, uint16_t rolling_counter, uint32_t address)
+void hormann_command(CC1101_t * cc1101)
 {
-	uint8_t txBuffer[7];
+/*
 
-	SendPowerOn(cc1101);
-	nrf_delay_ms(20);
-	make_somfy_frame(txBuffer, command, rolling_counter, address);
-	SendSomfyFrame(cc1101, 2, txBuffer);
-	nrf_delay_ms(30);		
-	SendSomfyFrame(cc1101, 7, txBuffer);
+0. 1. 1. 0. 1. 1. 0. 1. = 6d
+1. 0. 1. 1. 0. 1. 1. 0. = b6
+1. 0. 0. 1. 0. 0. 1. 0. = 92
+0. 1. 0. 0. 1. 0. 0. 1. = 49
+1. 0. 1. 1. 0. 1. 0. 0. = b4
+1. 1. 0. 1. 0. 0. 1. 1. = d3
+0. 1. 0. 0. 1. 0. 0. 1. = 49
+1. 0. 1. 1. 0. 1. 0. 0. = b4
+1. 1. 0. 1. 0. 0. 1. 0. = d2
+0. 1. 0. 0. 1. 0. 0. 1. = 49
+1. 0. 1. 1. 0. 1. 1. 0. = b6
+1. 1. 0. 1. 0. 0. 1. 1. = d3
+0. 1. 1. 0. 1. 1. 0. 1. = 6d
+1. 0. 1. 1. 0. 1. 0. 0. = b4
+1. 1. 0. 1. 0. 0. 1. 0. = d2
+0. 1. 0. 0. 1. 0. 0. 1. = 49
+1. 0. 1. 1. 0. 1  1  1  = b7
+*/
+
+	uint8_t txBuffer[17+4] = {0xed, 0xb6, 0x92, 0x49, 0xb4, 0xd3, 0x49, 0xb4, 0xd2, 0x49, 0xb6, 0xd3, 0x6d, 0xb4, 0xd2, 0x49, 0xb7, 0xff, 0xff, 0xff, 0xff};
+
+	send_poweron(cc1101);
+
+	for(int i = 0; i < 20; i++)
+	{
+		send_hormann_frame(cc1101, txBuffer, 17+4);
+		//nrf_delay_ms(13.5);		
+	}
+	//send_hormann_frame(cc1101, txBuffer, 17);
+}
+
+void hormann_command_v2(CC1101_t * cc1101)
+{
+	uint8_t txBuffer[17+4] = {0xed, 0xb6, 0x92, 0x49, 0xb4, 0xd3, 0x49, 0xb4, 0xd2, 0x49, 0xb6, 0xd3, 0x6d, 0xb4, 0xd2, 0x49, 0xb7, 0xff, 0xff, 0xff, 0xff};
+
+	send_poweron_2(cc1101);
+	send_hormann_frame_2(cc1101, txBuffer, 17+4, 20);
 }
 
 int main(void)
@@ -69,16 +100,16 @@ int main(void)
 	cc1101_init.gd0_pin = CC1101_GDO0_PIN;
 	cc1101_init.gd2_pin = CC1101_GDO2_PIN;
 	cc1101_init.spi_cs_pin = CC1101_CS_PIN;
-		// Somfy - OOK @ 433.42MHz baud_rate=1.6KHz
+	// Hormann - OOK @ 868.3MHz baud_rate= 2100us
 	uint8_t paTable[] = {0x00,0x60,0x00,0x00,0x00,0x00,0x00,0x00};
 	cc1101_init.pa_table = paTable;
 	RF_SETTINGS rfSettings =
 	{
 		0x0e,   // FSCTRL1   Frequency synthesizer control.
 		0x00,   // FSCTRL0   Frequency synthesizer control.
-		0x10,   // FREQ2     Frequency control word, high byte.
-		0xAC,   // FREQ1     Frequency control word, middle byte.
-		0x46,   // FREQ0     Frequency control word, low byte.
+		0x21,   // FREQ2     Frequency control word, high byte.
+		0x65,   // FREQ1     Frequency control word, middle byte.
+		0xf1,   // FREQ0     Frequency control word, low byte.
 		0xf6,   // MDMCFG4   Modem configuration.
 		0x43,   // MDMCFG3   Modem configuration.
 		0x38,   // MDMCFG2   Modem configuration.
@@ -105,10 +136,10 @@ int main(void)
 		0x35,   // TEST1     Various test settings.
 		0x09,   // TEST0     Various test settings.
 		0x47,   // FIFOTHR   RXFIFO and TXFIFO thresholds.
-		0x29,   // IOCFG2    GDO2 output pin configuration.
+		0x02,   // IOCFG2    GDO2 output pin configuration.
 		0x06,   // IOCFG0D   GDO0 output pin configuration. 
 		0x04,   // PKTCTRL1  Packet automation control.
-		0x00,   // PKTCTRL0  Packet automation control. -- for somfy v1
+		0x02,   // PKTCTRL0  Packet automation control. -- for somfy v1
 		//0x32,   // PKTCTRL0  Packet automation control. -- for somfy v2
 		0x00,   // ADDR      Device address.
 		0xff    // PKTLEN    Packet length.
@@ -116,21 +147,24 @@ int main(void)
 	cc1101_init.rf_setting = rfSettings;
 	cc1101_initialization(&cc1101_init);
 
-	uint16_t rolling_counter = 0x1553;
-	uint32_t address = 0x7a724a; // room-1 of unit-304
 	
 	while(1)
 	{
 		if(bsp_board_button_state_get(BSP_BOARD_BUTTON_0))
 		{
-			somfy_command(&cc1101_init, move_up, rolling_counter, address);
-			rolling_counter++;
+			uint8_t txBuffer[17+3] = {0x6d, 0xb6, 0x92, 0x49, 0xb4, 0xd3, 0x49, 0xb4, 0xd2, 0x49, 0xb6, 0xd3, 0x6d, 0xb4, 0xd2, 0x49, 0xb7, 0xff, 0xff, 0xff};
+
+			send_poweron_2(&cc1101_init);
+			RFStartSendBuffer(&cc1101_init, txBuffer, 17+3);
+			while(bsp_board_button_state_get(BSP_BOARD_BUTTON_0))
+				RFSendBuffer(&cc1101_init, txBuffer, 17+3);
+			
+			nrf_delay_ms(300);
+			RFSendTerminate(&cc1101_init);
 			NRF_LOG_INFO("button 0 is pressed.");
 		}
 		if(bsp_board_button_state_get(BSP_BOARD_BUTTON_1))
 		{
-			somfy_command(&cc1101_init, move_down, rolling_counter, address);
-			rolling_counter++;
 			NRF_LOG_INFO("button 1 is pressed.");
 		}
 		if(bsp_board_button_state_get(BSP_BOARD_BUTTON_2))

@@ -11,6 +11,7 @@
 uint8_t Init_CC1101(CC1101_t *cc1101)
 {
 	nrf_gpio_cfg_input(cc1101->gd0_pin, NRF_GPIO_PIN_PULLDOWN);
+	nrf_gpio_cfg_input(cc1101->gd2_pin, NRF_GPIO_PIN_PULLDOWN);
 	PowerupReset_CC1101(cc1101);
 	WriteStrobe_CC1101(cc1101, TI_CC1101_SRES);
 	
@@ -134,12 +135,27 @@ void updateModemSettings(CC1101_t *cc1101)
 
 void modemSetting(CC1101_t *cc1101, double baudrate, bool manchester_enabled)
 {
-	// rate = (256+DRATE_M).2**DRATE_E.f_OSC/2**28
-	const double f_osc = 26000000.0;
+	// rate = (256+DRATE_M).2**DRATE_E.f_OSC/2**28	
 	cc1101->rf_setting.MDMCFG4 = (cc1101->rf_setting.MDMCFG4 & 0xf0) + (uint8_t)(log2(baudrate*pow(2,28)/f_osc)-8);
 	cc1101->rf_setting.MDMCFG3 = (uint8_t)((baudrate*pow(2,28-(cc1101->rf_setting.MDMCFG4 & 0x0f))/f_osc)-256);
 	cc1101->rf_setting.MDMCFG2 = manchester_enabled ? cc1101->rf_setting.MDMCFG2 | 0x08 : cc1101->rf_setting.MDMCFG2 & 0xf7; 
 }
+
+void updateFrequencySettings(CC1101_t *cc1101, double freq)
+{
+	WriteStrobe_CC1101(cc1101, TI_CC1101_SPWD);
+
+	// frequency = f_OSC/2**16 * FREQ[23:0]
+	double correction_ratio = 1.0000599; // on cc1101 board, OSC is not exactly 26.000MHz, so need correction
+	uint32_t freq_value = (uint32_t)(freq*pow(2, 16)*correction_ratio/f_osc);
+	cc1101->rf_setting.FREQ0 = (uint8_t)(freq_value);
+	cc1101->rf_setting.FREQ1 = (uint8_t)(freq_value>>8);
+	cc1101->rf_setting.FREQ2 = (uint8_t)(freq_value>>16);
+	WriteReg_CC1101(cc1101, TI_CC1101_FREQ0,  cc1101->rf_setting.FREQ0);
+	WriteReg_CC1101(cc1101, TI_CC1101_FREQ1,  cc1101->rf_setting.FREQ1);
+	WriteReg_CC1101(cc1101, TI_CC1101_FREQ2,  cc1101->rf_setting.FREQ2);
+}
+
 
 //-----------------------------------------------------------------------------
 //  void RFSendPacket(char *txBuffer, char size)
@@ -168,6 +184,24 @@ uint8_t RFSendPacket(CC1101_t *cc1101, uint8_t *txBuffer, uint8_t size)
 	while(!nrf_gpio_pin_read(cc1101->gd0_pin));		// Wait GDO0 to go hi -> sync TX'ed
 	while(nrf_gpio_pin_read(cc1101->gd0_pin));		// Wait GDO0 to clear -> end of pkt
 	return retValue;
+}
+
+void RFStartSendBuffer(CC1101_t *cc1101, uint8_t *txBuffer, uint8_t size)
+{
+	WriteBurstReg_CC1101(cc1101, TI_CC1101_TXFIFO, txBuffer, size);
+	WriteStrobe_CC1101(cc1101, TI_CC1101_STX);				// Change state to TX, initiating, data transfer
+	while(!nrf_gpio_pin_read(cc1101->gd0_pin));		// Wait GDO0 to go hi -> sync TX'ed
+}
+
+void RFSendBuffer(CC1101_t *cc1101, uint8_t *txBuffer, uint8_t size)
+{
+	while(nrf_gpio_pin_read(cc1101->gd2_pin));		// Wait GDO2 to go low -> TxFifo is half empty
+	WriteBurstReg_CC1101(cc1101, TI_CC1101_TXFIFO, txBuffer, size);
+}
+
+void RFSendTerminate(CC1101_t *cc1101)
+{
+	WriteStrobe_CC1101(cc1101, TI_CC1101_SIDLE);				// Change state to TX, initiating, data transfer
 }
 
 //-----------------------------------------------------------------------------
