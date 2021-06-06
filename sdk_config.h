@@ -48,6 +48,50 @@
 #endif
 // <h> Application 
 
+
+// timer configuration:
+
+#define NRFX_TIMER_ENABLED 1
+#define NRFX_TIMER0_ENABLED 1
+#define NRFX_TIMER1_ENABLED 0
+#define NRFX_TIMER2_ENABLED 0
+#define NRFX_TIMER3_ENABLED 0
+#define NRFX_TIMER4_ENABLED 0
+ 
+// <0=> 16 MHz 
+// <1=> 8 MHz 
+// <2=> 4 MHz 
+// <3=> 2 MHz 
+// <4=> 1 MHz 
+// <5=> 500 kHz 
+// <6=> 250 kHz 
+// <7=> 125 kHz 
+// <8=> 62.5 kHz 
+// <9=> 31.25 kHz 
+#define NRFX_TIMER_DEFAULT_CONFIG_FREQUENCY 9
+
+// <0=> Timer 
+// <1=> Counter 
+#define NRFX_TIMER_DEFAULT_CONFIG_MODE 0
+
+// <0=> 16 bit 
+// <1=> 8 bit 
+// <2=> 24 bit 
+// <3=> 32 bit 
+#define NRFX_TIMER_DEFAULT_CONFIG_BIT_WIDTH 0
+ 
+// <0=> 0 (highest) 
+// <1=> 1 
+// <2=> 2 
+// <3=> 3 
+// <4=> 4 
+// <5=> 5 
+// <6=> 6 
+// <7=> 7 
+#define NRFX_TIMER_DEFAULT_CONFIG_IRQ_PRIORITY 6
+
+/////////////////////////
+
 #define CC1101_GDO0_PIN		31
 #define CC1101_GDO2_PIN		29
 #define CC1101_SCK_PIN		4

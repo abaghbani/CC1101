@@ -1,5 +1,9 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include "nrf.h"
+#include "nrfx_timer.h"
 #include "nrf_spi.h"
 #include "nrf_gpio.h"
 #include "nrf_delay.h"
@@ -76,13 +80,77 @@ void hormann_command_v2(CC1101_t * cc1101)
 	send_hormann_frame_2(cc1101, txBuffer, 17+4, 20);
 }
 
+
+const uint8_t test_array[] = {1,0,1,0,1,1,0,0,1,1,0,0};
+
+void timer_test_event_handler(nrf_timer_event_t event_type, void* p_context)
+{
+    // static uint32_t i;
+
+    switch (event_type)
+    {
+        case NRF_TIMER_EVENT_COMPARE0:
+			nrf_gpio_pin_toggle(46);
+			nrf_gpio_pin_toggle(47);
+			/*
+			if(test_array[(i++) % 12]==1)
+			{
+				nrf_gpio_pin_set(46);
+				nrf_gpio_pin_set(47);
+			}
+			else
+			{
+				nrf_gpio_pin_clear(46);
+				nrf_gpio_pin_clear(47);
+			}*/
+            break;
+
+        default:
+            //Do nothing.
+            break;
+    }
+}
+
+void timer_init(nrfx_timer_t *TIMER)
+{
+    // uint32_t time_ms = 300; //Time(in miliseconds) between consecutive compare events.
+    uint32_t time_us = 300+3; //Time(in microseconds) between consecutive compare events.
+    uint32_t time_ticks;
+
+    // nrfx_timer_config_t timer_cfg = NRFX_TIMER_DEFAULT_CONFIG;
+    nrfx_timer_config_t timer_cfg = {
+		.frequency          = NRF_TIMER_FREQ_2MHz,
+		.mode               = NRF_TIMER_MODE_TIMER,
+		.bit_width          = NRF_TIMER_BIT_WIDTH_16,
+		.interrupt_priority = 6,
+		.p_context          = NULL
+	};
+	
+    if(nrfx_timer_init(TIMER, &timer_cfg, timer_test_event_handler) != NRFX_SUCCESS)
+		NRF_LOG_INFO("Error: timer init is failed");
+
+    // time_ticks = nrfx_timer_ms_to_ticks(TIMER, time_ms);
+    time_ticks = nrfx_timer_us_to_ticks(TIMER, time_us);
+	NRF_LOG_INFO("timer init: tick number : %d", time_ticks);
+    nrfx_timer_extended_compare(TIMER, NRF_TIMER_CC_CHANNEL0, time_ticks, NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, true);
+}
+
 int main(void)
 {
 	
 	bsp_board_init(BSP_INIT_LEDS | BSP_INIT_BUTTONS);
+	nrf_gpio_cfg_output(46);
+	nrf_gpio_cfg_output(47);
+	nrf_gpio_pin_clear(46);
+	nrf_gpio_pin_clear(47);
+
 	
 	APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
 	NRF_LOG_DEFAULT_BACKENDS_INIT();
+
+	// timer init
+	nrfx_timer_t timer_0 = NRFX_TIMER_INSTANCE(0);
+	timer_init(&timer_0);
 
 	// spi init
 	Spi_t spi_init;
@@ -165,10 +233,12 @@ int main(void)
 		}
 		if(bsp_board_button_state_get(BSP_BOARD_BUTTON_1))
 		{
+		    nrfx_timer_enable(&timer_0);
 			NRF_LOG_INFO("button 1 is pressed.");
 		}
 		if(bsp_board_button_state_get(BSP_BOARD_BUTTON_2))
 		{
+			nrfx_timer_disable(&timer_0);
 			NRF_LOG_INFO("button 2 is pressed.");
 		}
 		if(bsp_board_button_state_get(BSP_BOARD_BUTTON_3))
