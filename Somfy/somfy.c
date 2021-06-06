@@ -5,6 +5,21 @@
 #include "CC1101_regs.h"
 #include "CC1101.h"
 
+/*
+https://pushstack.wordpress.com/somfy-rts-protocol/
+Parameters
+Frequency: 433.42 Mhz
+Modulation: ASK/OOK
+Encoding: Manchester code, rising edge = 1, falling edge = 0
+Payload Data length: 56 bit
+Symbol Width: 1208 us
+
+preamble : Repeating sequence of n symbol "11110000" (~2416us high and 2416us low). When a button is pressed n=2, repeating frames have n=7
+sync : 4550 us high, followed by 1/2 symbol width low(~604 us)
+data: data is Manchester encoded, 1=rising edge, 0=falling edge. One bit is encoded per symbol(~1208 us)
+Inter-frame gap: 30415 us of silence after last symbol. (Note: This means that if last bit = 0, then the line will be silent 1/2 symbol width longer)
+*/
+
 const uint16_t somfy_rts_interval = 1240; // symbol width in us -> ca. 828 Hz data rate
 const uint16_t somfy_rts_interval_half = somfy_rts_interval/2;
 const uint8_t SOMFY_RTS_FRAME_SIZE = 7;
