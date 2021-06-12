@@ -45,6 +45,7 @@ SRC_FILES += \
   $(PROJ_DIR)/CC1101/CC1101.c \
   $(PROJ_DIR)/somfy/somfy.c \
   $(PROJ_DIR)/hormann/hormann.c \
+  $(PROJ_DIR)/timer/timer.c \
   $(PROJ_DIR)/main.c \
   $(SDK_ROOT)/modules/nrfx/mdk/system_nrf52840.c \
 
@@ -55,6 +56,7 @@ INC_FOLDERS += \
   $(PROJ_DIR)/CC1101 \
   $(PROJ_DIR)/somfy \
   $(PROJ_DIR)/hormann \
+  $(PROJ_DIR)/timer \
   $(SDK_ROOT)/modules/nrfx \
   $(SDK_ROOT)/modules/nrfx/hal \
   $(SDK_ROOT)/modules/nrfx/mdk \
