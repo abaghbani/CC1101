@@ -74,14 +74,17 @@ void timer_send_duration(bool state, uint16_t n_tick)
 	while(timer_event_done==0);
 }
 
-void timer_send_data(uint8_t *data, uint16_t len)
+void timer_send_data(uint8_t *data, uint16_t len, bool msb_first)
 {
 	for(uint16_t i=0; i<len;i++)
 	{
 		for(uint16_t j=0;j<8;j++)
 		{
 			while(timer_event_done==0);
-			timer_tx_data = (data[i]>>j) & 0x01;
+			if(msb_first)
+				timer_tx_data = (data[i]>>(7-j)) & 0x01;
+			else
+				timer_tx_data = (data[i]>>j) & 0x01;
 			timer_event_done = 0;
 		}
 	}

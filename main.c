@@ -190,7 +190,7 @@ int main(void)
 			timer_send_duration(false, 225);	// 118ms low
 			do
 			{
-				timer_send_data(tx_buf, 17);
+				timer_send_data(tx_buf, 17, true);
 				timer_send_duration(true, 23);	// 12 ms high
 			}
 			while(bsp_board_button_state_get(BSP_BOARD_BUTTON_1));
