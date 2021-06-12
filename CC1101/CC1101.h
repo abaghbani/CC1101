@@ -57,7 +57,7 @@ typedef struct CC1101_struct
     uint8_t             *pa_table;
 } CC1101_t;
 
-uint8_t Init_CC1101(CC1101_t * cc1101);
+uint8_t Init_CC1101(CC1101_t * cc1101, bool serial_mode_en);
 uint8_t PowerupReset_CC1101(CC1101_t * cc1101);
 uint8_t WriteReg_CC1101(CC1101_t * cc1101, uint8_t addr, uint8_t value);
 uint8_t WriteBurstReg_CC1101(CC1101_t * cc1101, uint8_t addr, uint8_t *buffer, uint8_t count);
@@ -73,6 +73,7 @@ void modemSetting(CC1101_t *cc1101, double baudrate, bool manchester_enabled);
 void RFStartSendBuffer(CC1101_t *cc1101, uint8_t *txBuffer, uint8_t size);
 void RFSendBuffer(CC1101_t *cc1101, uint8_t *txBuffer, uint8_t size);
 void RFSendTerminate(CC1101_t *cc1101);
+void RFSend_async(CC1101_t *cc1101);
 
 
 #endif //CC1101_CONFIG_H

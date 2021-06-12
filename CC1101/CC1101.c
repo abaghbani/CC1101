@@ -8,10 +8,22 @@
 #include "CC1101_regs.h"
 #include "CC1101.h"
 
-uint8_t Init_CC1101(CC1101_t *cc1101)
+uint8_t Init_CC1101(CC1101_t *cc1101, bool serial_mode_en)
 {
-	nrf_gpio_cfg_input(cc1101->gd0_pin, NRF_GPIO_PIN_PULLDOWN);
-	nrf_gpio_cfg_input(cc1101->gd2_pin, NRF_GPIO_PIN_PULLDOWN);
+	if(!serial_mode_en)
+	{
+		nrf_gpio_cfg_input(cc1101->gd0_pin, NRF_GPIO_PIN_PULLDOWN);
+		nrf_gpio_cfg_input(cc1101->gd2_pin, NRF_GPIO_PIN_PULLDOWN);
+		cc1101->rf_setting.PKTCTRL0 &= 0xcf; 
+	}
+	else
+	{
+		nrf_gpio_cfg_output(cc1101->gd0_pin);
+		nrf_gpio_pin_clear(cc1101->gd0_pin);
+		nrf_gpio_cfg_input(cc1101->gd2_pin, NRF_GPIO_PIN_PULLDOWN);
+		cc1101->rf_setting.PKTCTRL0 |= 0x30;
+	}
+
 	PowerupReset_CC1101(cc1101);
 	WriteStrobe_CC1101(cc1101, TI_CC1101_SRES);
 	
@@ -204,6 +216,10 @@ void RFSendTerminate(CC1101_t *cc1101)
 	WriteStrobe_CC1101(cc1101, TI_CC1101_SIDLE);				// Change state to TX, initiating, data transfer
 }
 
+void RFSend_async(CC1101_t *cc1101)
+{
+	WriteStrobe_CC1101(cc1101, TI_CC1101_STX);
+}
 //-----------------------------------------------------------------------------
 //  char RFReceivePacket(char *rxBuffer, char *length)
 //
