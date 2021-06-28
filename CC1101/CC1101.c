@@ -7,6 +7,7 @@
 #include "spi_driver.h"
 #include "CC1101_regs.h"
 #include "CC1101.h"
+#include "nrf_log.h"
 
 uint8_t Init_CC1101(CC1101_t *cc1101, bool serial_mode_en)
 {
@@ -155,17 +156,14 @@ void modemSetting(CC1101_t *cc1101, double baudrate, bool manchester_enabled)
 
 void updateFrequencySettings(CC1101_t *cc1101, double freq)
 {
-	WriteStrobe_CC1101(cc1101, TI_CC1101_SPWD);
-
 	// frequency = f_OSC/2**16 * FREQ[23:0]
 	double correction_ratio = 1.0000599; // on cc1101 board, OSC is not exactly 26.000MHz, so need correction
 	uint32_t freq_value = (uint32_t)(freq*pow(2, 16)*correction_ratio/f_osc);
+	NRF_LOG_INFO("CC1101: frequency int = %d ", freq_value);
 	cc1101->rf_setting.FREQ0 = (uint8_t)(freq_value);
 	cc1101->rf_setting.FREQ1 = (uint8_t)(freq_value>>8);
 	cc1101->rf_setting.FREQ2 = (uint8_t)(freq_value>>16);
-	WriteReg_CC1101(cc1101, TI_CC1101_FREQ0,  cc1101->rf_setting.FREQ0);
-	WriteReg_CC1101(cc1101, TI_CC1101_FREQ1,  cc1101->rf_setting.FREQ1);
-	WriteReg_CC1101(cc1101, TI_CC1101_FREQ2,  cc1101->rf_setting.FREQ2);
+	NRF_LOG_INFO("CC1101: frequency is update to = %d so setting bytes = %x, %x, %x ", freq, cc1101->rf_setting.FREQ0, cc1101->rf_setting.FREQ1, cc1101->rf_setting.FREQ2);
 }
 
 

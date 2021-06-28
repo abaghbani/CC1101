@@ -15,4 +15,5 @@ enum somfy_ctrl
 void SendPowerOn(CC1101_t *cc1101);
 void SendSomfyFrame(CC1101_t *cc1101, uint8_t preamble_num, uint8_t *buf);
 void SendSomfyFrame_v2(CC1101_t *cc1101, uint8_t *buf);
-void make_somfy_frame(uint8_t *buf, uint8_t ctrl, uint16_t rolling_code, uint32_t address);
+void somfy_make_frame(uint8_t *buf, uint8_t ctrl, uint16_t rolling_code, uint32_t address);
+void somfy_send_frame();

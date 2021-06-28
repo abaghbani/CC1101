@@ -1,19 +1,7 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
-#include <stdint.h>
 #include "nrf.h"
 #include "nrfx_timer.h"
 #include "nrf_gpio.h"
-#include "nrf_delay.h"
-#include "boards.h"
-
-#include "app_util_platform.h"
-#include "app_error.h"
-
 #include "nrf_log.h"
-#include "nrf_log_ctrl.h"
-#include "nrf_log_default_backends.h"
 
 static volatile uint8_t timer_tx_data = 0;
 static volatile uint8_t timer_event_done = 1;

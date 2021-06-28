@@ -11,6 +11,7 @@
 #include "spi_driver.h"
 #include "CC1101_regs.h"
 #include "CC1101.h"
+#include "somfy.h"
 #include "hormann.h"
 #include "timer.h"
 
@@ -38,49 +39,6 @@ void cc1101_initialization(CC1101_t * cc1101, bool serial_mode_en)
 	NRF_LOG_INFO("chip version = %x", ReadStatus_CC1101(cc1101, TI_CC1101_VERSION));
 }
 
-void hormann_command(CC1101_t * cc1101)
-{
-/*
-
-0. 1. 1. 0. 1. 1. 0. 1. = 6d
-1. 0. 1. 1. 0. 1. 1. 0. = b6
-1. 0. 0. 1. 0. 0. 1. 0. = 92
-0. 1. 0. 0. 1. 0. 0. 1. = 49
-1. 0. 1. 1. 0. 1. 0. 0. = b4
-1. 1. 0. 1. 0. 0. 1. 1. = d3
-0. 1. 0. 0. 1. 0. 0. 1. = 49
-1. 0. 1. 1. 0. 1. 0. 0. = b4
-1. 1. 0. 1. 0. 0. 1. 0. = d2
-0. 1. 0. 0. 1. 0. 0. 1. = 49
-1. 0. 1. 1. 0. 1. 1. 0. = b6
-1. 1. 0. 1. 0. 0. 1. 1. = d3
-0. 1. 1. 0. 1. 1. 0. 1. = 6d
-1. 0. 1. 1. 0. 1. 0. 0. = b4
-1. 1. 0. 1. 0. 0. 1. 0. = d2
-0. 1. 0. 0. 1. 0. 0. 1. = 49
-1. 0. 1. 1. 0. 1  1	 1	= b7
-*/
-
-	uint8_t txBuffer[17+4] = {0xed, 0xb6, 0x92, 0x49, 0xb4, 0xd3, 0x49, 0xb4, 0xd2, 0x49, 0xb6, 0xd3, 0x6d, 0xb4, 0xd2, 0x49, 0xb7, 0xff, 0xff, 0xff, 0xff};
-
-	send_poweron(cc1101);
-
-	for(int i = 0; i < 20; i++)
-	{
-		send_hormann_frame(cc1101, txBuffer, 17+4);
-		//nrf_delay_ms(13.5);		
-	}
-	//send_hormann_frame(cc1101, txBuffer, 17);
-}
-
-void hormann_command_v2(CC1101_t * cc1101)
-{
-	uint8_t txBuffer[17+4] = {0xed, 0xb6, 0x92, 0x49, 0xb4, 0xd3, 0x49, 0xb4, 0xd2, 0x49, 0xb6, 0xd3, 0x6d, 0xb4, 0xd2, 0x49, 0xb7, 0xff, 0xff, 0xff, 0xff};
-
-	send_poweron_2(cc1101);
-	send_hormann_frame_2(cc1101, txBuffer, 17+4, 20);
-}
-
 int main(void)
 {
 	
@@ -96,7 +54,8 @@ int main(void)
 
 	// timer init
 	nrfx_timer_t timer_0 = NRFX_TIMER_INSTANCE(0);
-	timer_init(&timer_0, 525+3);	// hormann bit_width is 525us and 3us timer latency (BUGBUG: should be fixed)
+	//timer_init(&timer_0, 525+3);	// hormann bit_width is 525us and 3us timer latency (BUGBUG: should be fixed)
+	timer_init(&timer_0, 604+3);	// somfy bit_width is 604us and 3us timer latency (BUGBUG: should be fixed)
 
 	// spi init
 	Spi_t spi_init;
@@ -114,7 +73,6 @@ int main(void)
 	cc1101_init.gd0_pin = CC1101_GDO0_PIN;
 	cc1101_init.gd2_pin = CC1101_GDO2_PIN;
 	cc1101_init.spi_cs_pin = CC1101_CS_PIN;
-	// Hormann - OOK @ 868.3MHz baud_rate= 2100us
 	uint8_t paTable[] = {0x00,0x60,0x00,0x00,0x00,0x00,0x00,0x00};
 	cc1101_init.pa_table = paTable;
 	RF_SETTINGS rfSettings =
@@ -159,6 +117,12 @@ int main(void)
 		0xff	// PKTLEN	 Packet length.
 	};
 	cc1101_init.rf_setting = rfSettings;
+	
+	// Hormann - OOK @ 868.3MHz baud_rate= 2100us
+	//updateFrequencySettings(&cc1101_init, 868300000.0);
+	// Somfy - OOK @ 433.42MHz baud_rate=1.6KHz
+	updateFrequencySettings(&cc1101_init, 433420000.0);
+	
 	cc1101_initialization(&cc1101_init, true);	// serial mode is enabled
 
 	
@@ -179,19 +143,14 @@ int main(void)
 		}
 		if(bsp_board_button_state_get(BSP_BOARD_BUTTON_1))
 		{
-			uint8_t tx_buf[17] = {0x6d, 0xb6, 0x92, 0x49, 0xb4, 0xd3, 0x49, 0xb4, 0xd2, 0x49, 0xb6, 0xd3, 0x6d, 0xb4, 0xd2, 0x49, 0xb7};
-			// hormann bit_width is 525us, so timer tick should be set to this number (as precise as possible)
-
 			nrfx_timer_enable(&timer_0);
 			RFSend_async(&cc1101_init);
-			timer_send_duration(true, 55);		// 29ms high
-			timer_send_duration(false, 419);	// 220ms low
-			timer_send_duration(true, 40);		// 21ms high
-			timer_send_duration(false, 225);	// 118ms low
+			
+			// transmitting a HORMANN frame
+			hermann_power_on();
 			do
 			{
-				timer_send_data(tx_buf, 17, true);
-				timer_send_duration(true, 23);	// 12 ms high
+				hermann_send_frame();
 			}
 			while(bsp_board_button_state_get(BSP_BOARD_BUTTON_1));
 			RFSendTerminate(&cc1101_init);
@@ -204,6 +163,15 @@ int main(void)
 		}
 		if(bsp_board_button_state_get(BSP_BOARD_BUTTON_3))
 		{
+			nrfx_timer_enable(&timer_0);
+			RFSend_async(&cc1101_init);
+			
+			// transmitting a SOMFY frame
+			somfy_send_frame();
+
+			RFSendTerminate(&cc1101_init);
+
+			while(bsp_board_button_state_get(BSP_BOARD_BUTTON_3));
 			NRF_LOG_INFO("button 3 is pressed.");
 		}
 		

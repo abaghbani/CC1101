@@ -70,6 +70,7 @@ uint8_t RFSendPacket(CC1101_t * cc1101, uint8_t *txBuffer, uint8_t size);
 uint8_t RFReceivePacket(CC1101_t * cc1101, uint8_t *rxBuffer, uint8_t length);
 void updateModemSettings(CC1101_t *cc1101);
 void modemSetting(CC1101_t *cc1101, double baudrate, bool manchester_enabled);
+void updateFrequencySettings(CC1101_t *cc1101, double freq);
 void RFStartSendBuffer(CC1101_t *cc1101, uint8_t *txBuffer, uint8_t size);
 void RFSendBuffer(CC1101_t *cc1101, uint8_t *txBuffer, uint8_t size);
 void RFSendTerminate(CC1101_t *cc1101);

@@ -4,6 +4,9 @@
 #include "nrf_delay.h"
 #include "CC1101_regs.h"
 #include "CC1101.h"
+#include "nrfx_timer.h"
+#include "timer.h"
+#include "somfy.h"
 
 /*
 https://pushstack.wordpress.com/somfy-rts-protocol/
@@ -103,65 +106,6 @@ void SendSomfyFrame_old(CC1101_t *cc1101, uint8_t preamble_num, uint8_t *buf)
 	SendPayload(cc1101, buf);
 }
 
-static void Send_bitone(CC1101_t *cc1101)
-{
-	nrf_gpio_pin_clear(cc1101->gd0_pin);
-	nrf_delay_us(somfy_rts_interval_half);
-	nrf_gpio_pin_set(cc1101->gd0_pin);
-	nrf_delay_us(2*somfy_rts_interval_half);
-}
-
-static void Send_bitzero(CC1101_t *cc1101)
-{
-	nrf_gpio_pin_set(cc1101->gd0_pin);
-	nrf_delay_us(somfy_rts_interval_half);
-	nrf_gpio_pin_clear(cc1101->gd0_pin);
-	nrf_delay_us(2*somfy_rts_interval_half);
-}
-
-void SendSomfyFrame_v2(CC1101_t *cc1101, uint8_t *buf)
-{
-	nrf_gpio_cfg_output(cc1101->gd0_pin);
-	nrf_gpio_pin_clear(cc1101->gd0_pin);
-	modemSetting(cc1101, 1/100e-6, false);
-	updateModemSettings(cc1101);
-	WriteStrobe_CC1101(cc1101, TI_CC1101_STX);				// Change state to TX, initiating, data transfer
-
-	// send hardware sync (pulses of ca. double length)
-	for (int8_t i = 0; i < 2; i++)
-	{
-		nrf_gpio_pin_set(cc1101->gd0_pin);
-		nrf_delay_us(2*somfy_rts_interval);
-		nrf_gpio_pin_clear(cc1101->gd0_pin);
-		nrf_delay_us(2*somfy_rts_interval);
-	}
-
-	// send software sync (4 x symbol width high, half symbol width low)
-	nrf_gpio_pin_set(cc1101->gd0_pin);
-	nrf_delay_us(4*somfy_rts_interval);
-	nrf_gpio_pin_clear(cc1101->gd0_pin);
-	nrf_delay_us(somfy_rts_interval_half);
-
-	// Send the user data
-	for (int8_t i = 0; i < SOMFY_RTS_FRAME_SIZE; i++) {
-		uint16_t mask = 0x80; // mask to send bits (MSB first)
-		uint8_t d = buf[i];
-		for (int8_t j = 0; j < 8; j++) {
-			if ((d & mask) == 0) {
-				Send_bitzero(cc1101);
-			} else {
-				Send_bitone(cc1101);
-			}
-			mask >>= 1; //get next bit
-		}
-	}
-
-	// send inter-frame gap
-	nrf_gpio_pin_clear(cc1101->gd0_pin);
-	nrf_delay_us(100);
-	WriteStrobe_CC1101(cc1101, TI_CC1101_SIDLE);		// Change state to IDLE
-}
-
 static uint8_t somfy_rts_calc_checksum(uint8_t *frame)
 {
 	uint8_t checksum = 0;
@@ -172,7 +116,7 @@ static uint8_t somfy_rts_calc_checksum(uint8_t *frame)
 	return (checksum & 0x0f);
 }
 
-void make_somfy_frame(uint8_t *buf, uint8_t ctrl, uint16_t rolling_code, uint32_t address)
+void somfy_make_frame(uint8_t *buf, uint8_t ctrl, uint16_t rolling_code, uint32_t address)
 {	
 	// create somfy frame from the given input
 	// 0   |    1     |   2     3    | 4   5   6
@@ -195,4 +139,42 @@ void make_somfy_frame(uint8_t *buf, uint8_t ctrl, uint16_t rolling_code, uint32_
 	{
 		buf[i] = buf[i] ^ buf[i-1];
 	}
+}
+
+void somfy_send_frame()
+{
+	uint8_t tx_buf[20];
+	// somfy bit_width is 604us, so timer tick should be set to this number (as precise as possible)
+			
+	// power on
+	timer_send_duration(true, 20);		// 12ms high
+	timer_send_duration(false, 33);		// 20ms low
+
+	// sync
+	for(uint8_t i=0; i<2; i++)
+	{
+		tx_buf[i] = 0xf0;
+	}
+	tx_buf[2] = 0xfe;
+	timer_send_data(tx_buf, 3, true);
+	
+	// payload
+	uint16_t rolling_counter = 0x1553;
+	uint32_t address = 0x7a724a; // room-1 of unit-304
+	somfy_make_frame(tx_buf, move_up, rolling_counter, address);
+	timer_send_data(tx_buf, 7, true);
+	timer_send_duration(false, 50);	// 30 ms low
+
+	// sync
+	for(uint8_t i=0; i<7; i++)
+	{
+		tx_buf[i] = 0xf0;
+	}
+	tx_buf[7] = 0xfe;
+	timer_send_data(tx_buf, 8, true);
+	
+	// payload
+	somfy_make_frame(tx_buf, move_up, rolling_counter, address);
+	timer_send_data(tx_buf, 7, true);
+	timer_send_duration(false, 5);	// a short delay to end packet
 }
